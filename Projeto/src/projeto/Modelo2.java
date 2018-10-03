@@ -2,7 +2,7 @@ package projeto;
 
 import gurobi.*;
 
-public class Modelo1 {
+public class Modelo2 {
 
 //	N : Conjunto de Tarefas
 	private int      N;
@@ -21,13 +21,13 @@ public class Modelo1 {
     private GRBEnv   env  ;// = new GRBEnv("mip1.log");
     private GRBModel model;// = new GRBModel(env);
 	
-	public Modelo1(int N, int M, double t[][], double p[][][]) {
+	public Modelo2(int N, int M, double t[][], double p[][][]) {
 		this.N = N+1;
 		this.M = M;
 		this.t = t.clone();
 		this.p = p.clone();
 		delta = new GRBVar[M];
-		x = new GRBVar[N+1][N+1][M];
+		x = new GRBVar[N+2][N+2][M];
 	}
 	
 	public void criarModel() {//throws GRBException {
@@ -41,8 +41,8 @@ public class Modelo1 {
 //		}
 		for(int m=0;m<M;m++) {
 			delta[m] = model.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "delta_"+(m+1));
-			for(int i=0;i<N;i++) {
-				for(int j=0;j<N;j++) {
+			for(int i=0;i<N+1;i++) {
+				for(int j=0;j<N+1;j++) {
 					x[i][j][m] = model.addVar(0, 1, 0, GRB.BINARY, "x_"+i+","+j+","+(m+1));
 				}
 			}
@@ -66,13 +66,14 @@ public class Modelo1 {
 				GRBLinExpr const3 = new GRBLinExpr();
 				GRBLinExpr const2 = new GRBLinExpr();
 				const2.addTerm(1,x[0][i][m]);
+				const3.addTerm(1,x[i][N][m]);
 				for(int j=1;j<N;j++) {
 					if(i!=j) {
 						const3.addTerm(1, x[i][j][m]);
 						const2.addTerm(1, x[j][i][m]);
 					}
 				}
-				model.addConstr(const3, GRB.LESS_EQUAL, const2, "end_"+i+","+(m+1));
+				model.addConstr(const2, GRB.EQUAL, const3, "end_"+i+","+(m+1));
 			}
 		}
 		
@@ -80,7 +81,8 @@ public class Modelo1 {
 		for(int m=0;m<M;m++) {
 			GRBLinExpr const4 = new GRBLinExpr();
 			for(int i=0;i<N;i++) {
-				for(int j=0;j<N;j++) {
+				for(int j=1;j<N+1;j++) {
+					System.out.println("( " + i + " , " + j + " )");
 					if(i!=j)
 						const4.addTerm((t[j][m] + p[i][j][m]),x[i][j][m]);
 				}
@@ -88,7 +90,7 @@ public class Modelo1 {
 			model.addConstr(delta[m], GRB.EQUAL, const4, "time_"+(m+1));
 		}
 		
-//		forall m. sum_i(x_i_o_m) = 0
+//		forall m. sum_i(x_i_0_m) = 0
 		for(int m=0;m<M;m++) {
 			GRBLinExpr const1 = new GRBLinExpr();
 			for(int i=1;i<N;i++) {
@@ -97,13 +99,31 @@ public class Modelo1 {
 			model.addConstr(const1, GRB.EQUAL, 0, "var_begin_"+m);
 		}
 		
-//		forall m. sum_j(x_0_j_m) = 1 # não necessariamente toda máquina irá executar uma máquina
+//		forall m. sum_j(x_0_j_m) <= 1 # não necessariamente toda máquina irá executar uma máquina
 		for(int m=0;m<M;m++) {
 			GRBLinExpr const1 = new GRBLinExpr();
 			for(int j=1;j<N;j++) {
 				const1.addTerm(1, x[0][j][m]);
 			}
 			model.addConstr(const1, GRB.LESS_EQUAL, 1, "var_begin_"+m);
+		}
+		
+//		forall m. sum_i(x_n+1_i_m) = 0
+		for(int m=0;m<M;m++) {
+			GRBLinExpr const1 = new GRBLinExpr();
+			for(int i=1;i<N;i++) {
+				const1.addTerm(1, x[N][i][m]);
+			}
+			model.addConstr(const1, GRB.EQUAL, 0, "var_end_"+m);
+		}
+		
+//		forall m. sum_j(x_j_n+1_m) <= 1 # não necessariamente toda máquina irá executar uma máquina
+		for(int m=0;m<M;m++) {
+			GRBLinExpr const1 = new GRBLinExpr();
+			for(int j=1;j<N-1;j++) {
+				const1.addTerm(1, x[j][N-1][m]);
+			}
+			model.addConstr(const1, GRB.LESS_EQUAL, 1, "var_end_"+m);
 		}
 		
 //		Add constraint : forall m : makespan >= delta_m
