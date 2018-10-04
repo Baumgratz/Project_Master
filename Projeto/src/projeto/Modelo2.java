@@ -5,21 +5,21 @@ import gurobi.*;
 public class Modelo2 {
 
 //	N : Conjunto de Tarefas
-	private int      N;
+	int      N;
 //	M : Conjunto de Máquinas
-	private int      M;
+	int      M;
 //	t_i_m: tempo da tarefa i na maquina j
-	private double   t[][];
+	double   t[][];
 //	p_i_j_m : tempo de preparo entre a tarefa i e a tarefa j na máquina m
-	private double   p[][][];
+	double   p[][][];
 //	delta_m: tempo total da máquina m
-	private GRBVar   delta[];
+	GRBVar   delta[];
 //	makespan : max(forall m. delta_m)
-	private GRBVar   makespan;
+	GRBVar   makespan;
 //	x_i_j_m: se a tarefa i é feita primeiro que j na máquina m
-	private GRBVar   x[][][];
-    private GRBEnv   env  ;// = new GRBEnv("mip1.log");
-    private GRBModel model;// = new GRBModel(env);
+	GRBVar   x[][][];
+    GRBEnv   env  ;// = new GRBEnv("mip2.log");
+    GRBModel model;// = new GRBModel(env);
 	
 	public Modelo2(int N, int M, double t[][], double p[][][]) {
 		this.N = N+1;
@@ -30,9 +30,18 @@ public class Modelo2 {
 		x = new GRBVar[N+2][N+2][M];
 	}
 	
+	public Modelo2(Modelo1 m) {
+		N = m.N;
+		M = m.M;
+		t = m.t.clone();
+		p = m.p.clone();
+		delta = new GRBVar[M];
+		x = new GRBVar[N+2][N+2][M];
+	}
+	
 	public void criarModel() {//throws GRBException {
 		try {
-			env   = new GRBEnv("mip1.log");
+			env   = new GRBEnv("mip2.log");
 			model = new GRBModel(env);
 
 		makespan = model.addVar(0, GRB.INFINITY, 1, GRB.CONTINUOUS, "Makespan");
@@ -81,8 +90,7 @@ public class Modelo2 {
 		for(int m=0;m<M;m++) {
 			GRBLinExpr const4 = new GRBLinExpr();
 			for(int i=0;i<N;i++) {
-				for(int j=1;j<N+1;j++) {
-					System.out.println("( " + i + " , " + j + " )");
+				for(int j=0;j<N;j++) {
 					if(i!=j)
 						const4.addTerm((t[j][m] + p[i][j][m]),x[i][j][m]);
 				}

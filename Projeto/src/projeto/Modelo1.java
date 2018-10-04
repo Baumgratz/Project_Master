@@ -2,24 +2,28 @@ package projeto;
 
 import gurobi.*;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
 public class Modelo1 {
 
 //	N : Conjunto de Tarefas
-	private int      N;
+	int      N;
 //	M : Conjunto de Máquinas
-	private int      M;
+	int      M;
 //	t_i_m: tempo da tarefa i na maquina j
-	private double   t[][];
+	double   t[][];
 //	p_i_j_m : tempo de preparo entre a tarefa i e a tarefa j na máquina m
-	private double   p[][][];
+	double   p[][][];
 //	delta_m: tempo total da máquina m
-	private GRBVar   delta[];
+	GRBVar   delta[];
 //	makespan : max(forall m. delta_m)
-	private GRBVar   makespan;
+	GRBVar   makespan;
 //	x_i_j_m: se a tarefa i é feita primeiro que j na máquina m
-	private GRBVar   x[][][];
-    private GRBEnv   env  ;// = new GRBEnv("mip1.log");
-    private GRBModel model;// = new GRBModel(env);
+	GRBVar   x[][][];
+    GRBEnv   env  ;// = new GRBEnv("mip1.log");
+    GRBModel model;// = new GRBModel(env);
 	
 	public Modelo1(int N, int M, double t[][], double p[][][]) {
 		this.N = N+1;
@@ -28,6 +32,10 @@ public class Modelo1 {
 		this.p = p.clone();
 		delta = new GRBVar[M];
 		x = new GRBVar[N+1][N+1][M];
+	}
+	
+	public Modelo1(String file) {
+		readFile(file);
 	}
 	
 	public void criarModel() {//throws GRBException {
@@ -156,5 +164,58 @@ public class Modelo1 {
 			}
 		}
 	}
-	
+
+	public void readFile(String file) {
+		BufferedReader br = null;
+		FileReader fr = null;
+
+		try {
+		
+			fr = new FileReader(file); // Máquinas identicas
+			br = new BufferedReader(fr);
+		
+			String sCurrentLine = br.readLine();
+			String[] s = sCurrentLine.split("  ");
+//			for(int i=0;i<s.length;i++)
+//				System.out.println(s[i]);
+			N = Integer.parseInt(s[0])+2; 
+			M = Integer.parseInt(s[1]);
+			System.out.println(N + " - " + M);
+			p = new double[N][N][M];
+			for(int i=1;i<N-1;i++) {
+				sCurrentLine = br.readLine();
+				s = sCurrentLine.split("  ");
+//				for(int v=0;v<s.length;v++)
+//					System.out.println("|" + s[v] + "|");
+				for(int j=1;j<N-1;j++) {
+					System.out.println("( " + i + " , " + j + " ) = " +  Integer.parseInt(s[j]));
+					for(int k=0;k<M;k++) {
+						p[i][j][k] = Integer.parseInt(s[j]);
+					}
+				}
+				
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (br != null)
+					br.close();
+				if (fr != null)
+					fr.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+		t = new double[N][M];
+		for(int i=0;i<N;i++) {
+			for(int k=0;k<M;k++) {
+				t[i][k] = 0;
+			}
+		}
+		delta = new GRBVar[M];
+		x = new GRBVar[N+1][N+1][M];
+		
+	}
+
 }
